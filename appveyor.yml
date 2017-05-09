@@ -1,0 +1,104 @@
+environment:
+  global:
+    PROJECT_NAME: wrapper
+    WRAPPER_VERSION: 3.5.32
+    WRAPPER_SHA256: c11d6300c7a65acd301591a97b79e3ee046f3f7d65cb0ff8f2fc2e29cb4568ec
+
+  matrix:
+    - TARGET: i686-pc-windows-msvc
+      ARCH: x86
+      VS: C:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\VC\\bin\\vcvars32.bat
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+      TOOLSET: v120_xp
+      ESCRIPT: v120_xp.bat
+      CONFIGURATION: Release
+      JAVA_HOME: C:\Program Files (x86)\Java\jdk1.8.0
+    - TARGET: x86_64-pc-windows-msvc
+      ARCH: x64
+      VS: C:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\VC\\bin\\amd64\\vcvars64.bat
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
+      TOOLSET: v120_xp
+      ESCRIPT: v120_xp64.bat
+      CONFIGURATION: Release
+      JAVA_HOME: C:\Program Files\Java\jdk1.8.0
+    - TARGET: i686-pc-windows-msvc
+      ARCH: x86
+      VS: C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\vcvars32.bat
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      TOOLSET: v140_xp
+      ESCRIPT: v140_xp.bat
+      CONFIGURATION: Release
+      JAVA_HOME: C:\Program Files (x86)\Java\jdk1.8.0
+    - TARGET: x86_64-pc-windows-msvc
+      ARCH: x64
+      VS: C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\bin\\amd64\\vcvars64.bat
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      TOOLSET: v140_xp
+      ESCRIPT: v140_xp64.bat
+      CONFIGURATION: Release
+      JAVA_HOME: C:\Program Files\Java\jdk1.8.0
+    - TARGET: i686-pc-windows-msvc
+      ARCH: x86
+      VS: C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars32.bat
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      TOOLSET: v141_xp
+      ESCRIPT: v141_xp.bat
+      CONFIGURATION: Release
+      JAVA_HOME: C:\Program Files (x86)\Java\jdk1.8.0
+    - TARGET: x86_64-pc-windows-msvc
+      ARCH: x64
+      VS: C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      TOOLSET: v141_xp
+      ESCRIPT: v141_xp64.bat
+      CONFIGURATION: Release
+      JAVA_HOME: C:\Program Files\Java\jdk1.8.0
+
+matrix:
+  allow_failures:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+
+install:
+  - if defined VS call "%VS%"
+  #- if defined ESCRIPT call "%ESCRIPT%"
+  - cd \
+  - appveyor DownloadFile http://www.us.apache.org/dist//ant/binaries/apache-ant-1.10.1-bin.zip
+  - 7z x apache-ant-1.10.1-bin.zip > nul
+  - cd %APPVEYOR_BUILD_FOLDER%
+  - set ANT_HOME=C:\apache-ant-1.10.1
+  - set PATH=%JAVA_HOME%\bin;%ANT_HOME%\bin;%PATH%
+  - echo vcvars.bat="%VS%"> C:\Users\appveyor\.ant.properties
+
+build: false
+
+build_script:
+  - release.cmd
+
+before_deploy:
+  - cd dist\%TARGET%\%TOOLSET%\%CONFIGURATION%
+  - 7z a ../%PROJECT_NAME%-%APPVEYOR_REPO_TAG_NAME%-%TARGET%-%TOOLSET%-%CONFIGURATION%.zip *
+  - appveyor PushArtifact ../%PROJECT_NAME%-%APPVEYOR_REPO_TAG_NAME%-%TARGET%-%TOOLSET%-%CONFIGURATION%.zip
+
+deploy:
+  description: 'wrapper'
+  # All the zipped artifacts will be deployed
+  artifact: /.*\.zip/
+  # TODO Regenerate this auth_token for your project, this one won't work for you. Here's how:
+  # - Go to 'https://github.com/settings/tokens/new' and generate a Token with only the
+  # `public_repo` scope enabled
+  # - Then go to 'https://ci.appveyor.com/tools/encrypt' and enter the newly generated token.
+  # - Enter the "encrypted value" below
+  auth_token:
+    secure: cW2lNuSBqYoZhkWPcNmD/QQ5gyvXu7oM0etZqA9hvnu/BqRSWgDuiKvYWrGsHPIZ
+  provider: GitHub
+  # deploy when a new tag is pushed
+  on:
+    appveyor_repo_tag: true
+
+branches:
+  only:
+    - master
+    # IMPORTANT Regex to match tags. Required, or appveyor may not trigger deploys when a new tag
+    # is pushed. This regex matches semantic versions like v1.2.3-rc4+2016.02.22
+    - /^v\d+\.\d+\.\d+.*$/

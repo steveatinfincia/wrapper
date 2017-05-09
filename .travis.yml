@@ -1,0 +1,113 @@
+dist: trusty
+language: java
+sudo: true
+
+env:
+  global:
+    # This will be part of the release tarball
+    - PROJECT_NAME="wrapper"
+    - WRAPPER_VERSION=3.5.32
+    - WRAPPER_SHA256=c11d6300c7a65acd301591a97b79e3ee046f3f7d65cb0ff8f2fc2e29cb4568ec
+
+
+
+matrix:
+  include:
+    - os: linux
+      env: TARGET=x86_64-unknown-linux-gnu JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+    - os: linux
+      env: TARGET=i686-unknown-linux-gnu JAVA_HOME=/usr/lib/jvm/java-7-openjdk-i386
+    - os: linux
+      env: TARGET=arm64-unknown-linux-gnu JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+    - os: linux
+      env: TARGET=armhf-unknown-linux-gnu JAVA_HOME=/usr/lib/jvm/java-7-openjdk-i386
+    - os: osx
+      osx_image: xcode8.3.2
+      env: TARGET=x86_64-apple-darwin
+
+allow_failures:
+    env: TARGET=arm64-unknown-linux-gnu
+    env: TARGET=armhf-unknown-linux-gnu
+
+before_install:
+  - echo rvm_auto_reload_flag=1 >> ~/.rvmrc
+  - >
+      case "${TRAVIS_OS_NAME:-linux}" in
+          linux)
+          sudo ln -s /usr/include/asm-generic /usr/include/asm
+          sudo apt-get -y remove postgresql*
+          sudo apt-get -y remove mongodb-org mongodb-org-mongos mongodb-org-server mongodb-org-shell mongodb-org-tools
+          sudo apt-get -y remove oracle-java8-installer oracle-java8-unlimited-jce-policy oracle-java9-installer oracle-java9-set-default oracle-java9-unlimited-jce-policy
+          sudo apt-get -y upgrade
+          ;;
+          osx)
+          ;;
+      esac;
+  - >
+      case ${TARGET} in
+          x86_64-apple-darwin)
+              brew install ant
+              ;;
+          x86_64-unknown-linux-gnu)
+              sudo apt-get install linux-headers-generic
+              sudo apt-get install openjdk-7-jdk
+              ;;
+          i686-unknown-linux-gnu)
+              sudo dpkg --add-architecture i386
+              sudo apt-get update
+              sudo apt-get install gcc-multilib
+              sudo apt-get install linux-libc-dev:i386 libc6:i386
+              sudo apt-get install linux-headers-generic:i386
+              sudo apt-get install openjdk-7-jdk:i386
+              ;;
+          arm64-unknown-linux-gnu)
+              sudo dpkg --add-architecture arm64
+              sudo apt-get update
+              sudo apt-get install gcc-multilib
+              sudo apt-get install linux-libc-dev-arm64-cross libc6-arm64-cross libc6-dev-arm64-cross
+              sudo apt-get install gcc-aarch64-linux-gnu
+              sudo apt-get install linux-headers-generic
+              sudo apt-get install openjdk-7-jdk
+              ;;
+          armhf-unknown-linux-gnu)
+              sudo dpkg --add-architecture armhf
+              sudo apt-get update
+              sudo apt-get install gcc-multilib
+              sudo apt-get install linux-libc-dev-armhf-cross libc6-armhf-cross libc6-dev-armhf-cross
+              sudo apt-get install gcc-arm-linux-gnueabihf
+              sudo apt-get install linux-headers-generic
+              sudo apt-get install openjdk-7-jdk:i386
+              ;;
+      esac;
+
+after_script: set +e
+
+script:
+  - bash release.sh
+
+before_deploy:
+  - bash ci/before_deploy.sh
+
+deploy:
+  provider: releases
+  api_key:
+    secure: U3s1Lfvk0/D7yNUV5/MJ07cERAjWp6+oIrbbW2qFxxTBsgtLlmkPIMESR6J174AVW21WcZqibUCMvMTdkNHqECwGsBimJlzrtxKSNVXx4GagRau5qEH/ESuuhiuHXbkXcDHCgbC0+7YF+vg8zF4GdKqytbUYFicENWl6dH5yZW4Yvp+LoSoRCVMbizehY+SjRZu+qZRpKp2R4trMKAe3uROGvt+E2eaSrGWf+1CznleQG++C0jDsWNkkvD4JkAmml2invhvIqLjrpw6c4AWETiqUNANw6SkQnr9q42a0brzgD3Y6E7iC1QxuPhx/ZBt2PJCaaJKIx3SUY3JI0qgPVNKfUgORS3uCfHf9Bzgjc7e8jw1BnW/9S7fTyLfig1eeVxNr42ra5YrrU/Ra4Txt8Guj259vgqiCu31s1tHFR0DjcMxiPx81tEXcKXpAyKA1UtSegkvouMR6kC2Z1HuvxsUYZ7P2vI6+0s4KX70bPH8mw3JCHF5ese05oWGdnwjwS0CBhrQoGtzrwdQyBn4dRonQhxjMlgD0eGsq8N3IQRwMsaf1AKXRCAuDmLKdYxdRVsIyLl0bi8xxl2eWEknvrOvmh7mYX9WHzBEOkFc4Qba1AdvnwayoNFFIWho4aNUcqny1/JOgyaIADK+fm2nPCiEjO7d+LoCWZg12viJ6OLY=
+  file_glob: true
+  file: ${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}.*
+  # don't delete the artifacts from previous phases
+  skip_cleanup: true
+  # deploy when a new tag is pushed
+  on:
+    tags: true
+
+branches:
+  only:
+    # Pushes and PR to the master branch
+    - master
+    # IMPORTANT Ruby regex to match tags. Required, or travis won't trigger deploys when a new tag
+    # is pushed. This regex matches semantic versions like v1.2.3-rc4+2016.02.22
+    - /^v\d+\.\d+\.\d+.*$/
+
+notifications:
+  email:
+    on_success: never
