@@ -11,7 +11,7 @@
 PROJ = wrapper
 
 
-COMPILE = cl /D "WIN32" /D "WIN64" /D "NDEBUG" /FD /EHsc /MT /W3 /nologo /c /Zi /errorReport:prompt /D "_CRT_SECURE_NO_DEPRECATE" /D "UNICODE" /D "_UNICODE" /D "_WIN32_WINNT=0x0500"
+COMPILE = cl /D "WIN32" /D "WIN64" /D "USING_V120_SDK71_" /D "NDEBUG" /FD /EHsc /MT /W3 /nologo /c /Zi /errorReport:prompt /D "_CRT_SECURE_NO_DEPRECATE" /D "UNICODE" /D "_UNICODE" /D "_WIN32_WINNT=0x0500"
 LINK = link /NOLOGO /MANIFEST /DEBUG /MACHINE:AMD64 /ERRORREPORT:PROMPT DelayImp.lib
 RC = rc
 
