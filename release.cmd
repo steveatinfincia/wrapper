@@ -53,6 +53,8 @@ pushd wrapper_%WRAPPER_VERSION%_src
 
 @echo copying customized makefiles
 
+copy /y "..\..\makefiles\Makefile-windows-x86-32.nmake" "src\c" || goto :error
+
 copy /y "..\..\makefiles\Makefile-windows-x86-64.nmake" "src\c" || goto :error
 
 @echo patching build.xml
